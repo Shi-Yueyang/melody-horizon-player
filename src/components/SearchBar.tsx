@@ -23,6 +23,9 @@ const SearchBar = ({ onSearch, isLoading }: SearchBarProps) => {
       debounceTimeout.current = setTimeout(() => {
         onSearch(query);
       }, 500);
+    } else if (query === "") {
+      // Clear results when search is empty
+      onSearch("");
     }
 
     return () => {

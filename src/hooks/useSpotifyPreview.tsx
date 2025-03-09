@@ -22,6 +22,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
   const [currentTrack, setCurrentTrack] = useState<SpotifyTrack | null>(null);
   const [recentTracks, setRecentTracks] = useState<SpotifyTrack[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(true);
 
   // Initialize recentTracks from localStorage
   useEffect(() => {
@@ -44,12 +45,15 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
   // Fetch or retrieve cached Spotify token
   const getAccessToken = useCallback(async () => {
+    setTokenLoading(true);
+    
     // Check if we have a non-expired token
     const cachedToken = localStorage.getItem(TOKEN_CACHE_KEY);
     const tokenExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
     
     if (cachedToken && tokenExpiry && new Date().getTime() < parseInt(tokenExpiry, 10)) {
       setAccessToken(cachedToken);
+      setTokenLoading(false);
       return cachedToken;
     }
 
@@ -76,6 +80,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
         localStorage.setItem(TOKEN_EXPIRY_KEY, expiry.toString());
         
         setAccessToken(data.access_token);
+        setTokenLoading(false);
         return data.access_token;
       } else {
         throw new Error("Failed to get access token");
@@ -83,6 +88,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
     } catch (error) {
       console.error("Error fetching Spotify token:", error);
       toast.error("Failed to connect to Spotify");
+      setTokenLoading(false);
       return null;
     }
   }, []);
@@ -95,6 +101,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
     setIsLoading(true);
     try {
+      // Make sure we have a token before searching
       const token = accessToken || await getAccessToken();
       
       if (!token) {
@@ -111,6 +118,37 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       );
 
       if (!response.ok) {
+        // If token expired during this session, try to get a new one
+        if (response.status === 401) {
+          localStorage.removeItem(TOKEN_CACHE_KEY);
+          localStorage.removeItem(TOKEN_EXPIRY_KEY);
+          const newToken = await getAccessToken();
+          
+          if (newToken) {
+            // Retry the search with the new token
+            const retryResponse = await fetch(
+              `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+              {
+                headers: {
+                  Authorization: `Bearer ${newToken}`,
+                },
+              }
+            );
+            
+            if (!retryResponse.ok) {
+              throw new Error(`Error: ${retryResponse.status}`);
+            }
+            
+            const data: SpotifySearchResponse = await retryResponse.json();
+            const tracksWithPreviews = data.tracks.items.filter(
+              (track) => track.preview_url
+            );
+            
+            setTracks(tracksWithPreviews);
+            return;
+          }
+        }
+        
         throw new Error(`Error: ${response.status}`);
       }
 
