@@ -14,7 +14,6 @@ const TrackList = ({ tracks, title, onTrackSelect, currentTrackId }: TrackListPr
     return null;
   }
 
-  console.log(`Rendering ${title} with ${tracks.length} tracks`);
 
   return (
     <div className="w-full animate-fade-in">

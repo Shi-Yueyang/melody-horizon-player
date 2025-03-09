@@ -55,7 +55,6 @@ const MusicPlayer = () => {
 
   // Handle track selection
   const handleTrackSelect = (track: SpotifyTrack) => {
-    console.log("Track selected:", track.name);
     if (currentTrack && currentTrack.id === track.id) {
       // Toggle play/pause if selecting the same track
       handlePlayPause();
@@ -86,11 +85,7 @@ const MusicPlayer = () => {
     }
   };
 
-  // Handle search
-  const handleSearch = async (query: string) => {
-    console.log("Search handler called with query:", query);
-    await searchTracks(query);
-  };
+
 
   // Reset audio playback when track changes
   useEffect(() => {
@@ -127,7 +122,7 @@ const MusicPlayer = () => {
 
         {/* Right column: Search, controls, tracks */}
         <div className="lg:col-span-2 flex flex-col gap-8 animate-fade-in animate-delay-100">
-          <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+          <SearchBar onSearch={searchTracks} isLoading={isLoading} />
 
           <div className="bg-card rounded-xl shadow-subtle p-6">
             <div className="flex flex-col gap-6">
