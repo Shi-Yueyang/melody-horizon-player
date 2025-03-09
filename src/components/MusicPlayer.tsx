@@ -23,12 +23,6 @@ const MusicPlayer = () => {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Debug information
-  useEffect(() => {
-    console.log("Current tracks state:", tracks);
-    console.log("Current tracks length:", tracks.length);
-  }, [tracks]);
-
   // Update current index when tracks or currentTrack changes
   useEffect(() => {
     if (currentTrack) {
