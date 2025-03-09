@@ -23,6 +23,12 @@ const MusicPlayer = () => {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Debug information
+  useEffect(() => {
+    console.log("Current tracks state:", tracks);
+    console.log("Current tracks length:", tracks.length);
+  }, [tracks]);
+
   // Update current index when tracks or currentTrack changes
   useEffect(() => {
     if (currentTrack) {
@@ -55,6 +61,7 @@ const MusicPlayer = () => {
 
   // Handle track selection
   const handleTrackSelect = (track: SpotifyTrack) => {
+    console.log("Track selected:", track.name);
     if (currentTrack && currentTrack.id === track.id) {
       // Toggle play/pause if selecting the same track
       handlePlayPause();
@@ -83,6 +90,12 @@ const MusicPlayer = () => {
       playTrack(tracks[currentIndex + 1]);
       setIsPlaying(true);
     }
+  };
+
+  // Handle search
+  const handleSearch = async (query: string) => {
+    console.log("Search handler called with query:", query);
+    await searchTracks(query);
   };
 
   // Reset audio playback when track changes
@@ -120,7 +133,7 @@ const MusicPlayer = () => {
 
         {/* Right column: Search, controls, tracks */}
         <div className="lg:col-span-2 flex flex-col gap-8 animate-fade-in animate-delay-100">
-          <SearchBar onSearch={searchTracks} isLoading={isLoading} />
+          <SearchBar onSearch={handleSearch} isLoading={isLoading} />
 
           <div className="bg-card rounded-xl shadow-subtle p-6">
             <div className="flex flex-col gap-6">
@@ -144,16 +157,20 @@ const MusicPlayer = () => {
           </div>
 
           <div className="space-y-8 animate-fade-in animate-delay-200">
-            {tracks.length > 0 && (
+            {tracks && tracks.length > 0 ? (
               <TrackList
                 tracks={tracks}
                 title="Search Results"
                 onTrackSelect={handleTrackSelect}
                 currentTrackId={currentTrack?.id}
               />
+            ) : (
+              isLoading ? (
+                <p className="text-center text-muted-foreground">Searching for tracks...</p>
+              ) : null
             )}
 
-            {recentTracks.length > 0 && (
+            {recentTracks && recentTracks.length > 0 && (
               <TrackList
                 tracks={recentTracks}
                 title="Recently Played"

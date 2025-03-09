@@ -21,6 +21,7 @@ const SearchBar = ({ onSearch, isLoading }: SearchBarProps) => {
 
     if (query.trim()) {
       debounceTimeout.current = setTimeout(() => {
+        console.log("Searching for:", query);
         onSearch(query);
       }, 500);
     } else if (query === "") {

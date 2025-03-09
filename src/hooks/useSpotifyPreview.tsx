@@ -52,6 +52,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
     const tokenExpiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
     
     if (cachedToken && tokenExpiry && new Date().getTime() < parseInt(tokenExpiry, 10)) {
+      console.log("Using cached token");
       setAccessToken(cachedToken);
       setTokenLoading(false);
       return cachedToken;
@@ -59,6 +60,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
     // No valid token, get a new one
     try {
+      console.log("Fetching new token");
       const clientId = '61ce55f9bb6a40988f129c0b42658777'; // Your Spotify Client ID
       const clientSecret = '005a745e0bfa4fa1bd445acae1f5f6a8'; // Your Spotify Client Secret
 
@@ -74,6 +76,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       const data = await response.json();
       
       if (data.access_token) {
+        console.log("Token acquired successfully");
         // Cache token for 50 minutes (Spotify tokens last 60 minutes)
         const expiry = new Date().getTime() + 50 * 60 * 1000;
         localStorage.setItem(TOKEN_CACHE_KEY, data.access_token);
@@ -95,11 +98,15 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
   const searchTracks = useCallback(async (query: string) => {
     if (!query.trim()) {
+      console.log("Empty query, clearing results");
       setTracks([]);
+      setIsLoading(false);
       return;
     }
 
+    console.log("Searching for tracks with query:", query);
     setIsLoading(true);
+    
     try {
       // Make sure we have a token before searching
       const token = accessToken || await getAccessToken();
@@ -108,8 +115,12 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
         throw new Error("Authentication failed");
       }
 
+      console.log("Using token to search:", token.substring(0, 10) + "...");
+      const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`;
+      console.log("Search URL:", searchUrl);
+      
       const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+        searchUrl,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -120,12 +131,14 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       if (!response.ok) {
         // If token expired during this session, try to get a new one
         if (response.status === 401) {
+          console.log("Token expired, getting a new one");
           localStorage.removeItem(TOKEN_CACHE_KEY);
           localStorage.removeItem(TOKEN_EXPIRY_KEY);
           const newToken = await getAccessToken();
           
           if (newToken) {
             // Retry the search with the new token
+            console.log("Retrying search with new token");
             const retryResponse = await fetch(
               `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
               {
@@ -140,11 +153,15 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
             }
             
             const data: SpotifySearchResponse = await retryResponse.json();
+            console.log("Search response data:", data);
+            
             const tracksWithPreviews = data.tracks.items.filter(
               (track) => track.preview_url
             );
             
+            console.log(`Found ${tracksWithPreviews.length} tracks with previews`);
             setTracks(tracksWithPreviews);
+            setIsLoading(false);
             return;
           }
         }
@@ -153,10 +170,13 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       }
 
       const data: SpotifySearchResponse = await response.json();
+      console.log("Search response data:", data);
+      
       const tracksWithPreviews = data.tracks.items.filter(
         (track) => track.preview_url
       );
 
+      console.log(`Found ${tracksWithPreviews.length} tracks with previews`);
       setTracks(tracksWithPreviews);
     } catch (error) {
       console.error("Error searching tracks:", error);
@@ -168,6 +188,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
   }, [accessToken, getAccessToken]);
 
   const playTrack = useCallback((track: SpotifyTrack) => {
+    console.log("Playing track:", track.name);
     setCurrentTrack(track);
     
     // Add to recent tracks (if not already the most recent)

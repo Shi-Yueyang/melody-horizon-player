@@ -10,9 +10,11 @@ interface TrackListProps {
 }
 
 const TrackList = ({ tracks, title, onTrackSelect, currentTrackId }: TrackListProps) => {
-  if (tracks.length === 0) {
+  if (!tracks || tracks.length === 0) {
     return null;
   }
+
+  console.log(`Rendering ${title} with ${tracks.length} tracks`);
 
   return (
     <div className="w-full animate-fade-in">
