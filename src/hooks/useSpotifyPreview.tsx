@@ -55,8 +55,8 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
     // No valid token, get a new one
     try {
-      const clientId = 'your-client-id'; // Replace with your Spotify Client ID
-      const clientSecret = 'your-client-secret'; // Replace with your Spotify Client Secret
+      const clientId = '005a745e0bfa4fa1bd445acae1f5f6a8'; // Your Spotify Client ID
+      const clientSecret = '005a745e0bfa4fa1bd445acae1f5f6a8'; // Your Spotify Client Secret
 
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
