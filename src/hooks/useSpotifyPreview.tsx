@@ -2,7 +2,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { SpotifySearchResponse, SpotifyTrack } from "@/types/spotify";
-
 // Create a 30-minute token cache 
 const TOKEN_CACHE_KEY = "spotify_token";
 const TOKEN_EXPIRY_KEY = "spotify_token_expiry";
@@ -23,6 +22,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
   const [recentTracks, setRecentTracks] = useState<SpotifyTrack[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(true);
+  // const spotifyPreviewFinder = require('spotify-preview-finder');
 
   // Initialize recentTracks from localStorage
   useEffect(() => {
@@ -59,8 +59,8 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
     // No valid token, get a new one
     try {
-      const clientId = '61ce55f9bb6a40988f129c0b42658777'; // Your Spotify Client ID
-      const clientSecret = '005a745e0bfa4fa1bd445acae1f5f6a8'; // Your Spotify Client Secret
+      const clientId = '61ce55f9bb6a40988f129c0b42658777'; 
+      const clientSecret = '005a745e0bfa4fa1bd445acae1f5f6a8'; 
 
       const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -107,18 +107,16 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       if (!token) {
         throw new Error("Authentication failed");
       }
-
       const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=US`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-
+      
       if (!response.ok) {
-        // If token expired during this session, try to get a new one
         if (response.status === 401) {
           localStorage.removeItem(TOKEN_CACHE_KEY);
           localStorage.removeItem(TOKEN_EXPIRY_KEY);
@@ -156,7 +154,6 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       const tracksWithPreviews = data.tracks.items.filter(
         (track) => track.preview_url
       );
-
       setTracks(tracksWithPreviews);
     } catch (error) {
       console.error("Error searching tracks:", error);

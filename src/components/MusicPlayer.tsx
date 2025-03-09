@@ -22,7 +22,6 @@ const MusicPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-
   // Update current index when tracks or currentTrack changes
   useEffect(() => {
     if (currentTrack) {
