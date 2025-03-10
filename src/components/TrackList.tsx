@@ -14,7 +14,6 @@ const TrackList = ({ tracks, title, onTrackSelect, currentTrackId }: TrackListPr
     return null;
   }
 
-
   return (
     <div className="w-full animate-fade-in">
       <h3 className="text-sm font-medium text-muted-foreground mb-3">{title}</h3>
@@ -60,6 +59,6 @@ const TrackList = ({ tracks, title, onTrackSelect, currentTrackId }: TrackListPr
       </div>
     </div>
   );
-};
+}
 
 export default TrackList;

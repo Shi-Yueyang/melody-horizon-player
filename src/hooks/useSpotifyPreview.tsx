@@ -2,6 +2,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { SpotifySearchResponse, SpotifyTrack } from "@/types/spotify";
+import { getTrackPreview } from "spotify-preview-finder";
+
 // Create a 30-minute token cache 
 const TOKEN_CACHE_KEY = "spotify_token";
 const TOKEN_EXPIRY_KEY = "spotify_token_expiry";
@@ -22,7 +24,6 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
   const [recentTracks, setRecentTracks] = useState<SpotifyTrack[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(true);
-  // const spotifyPreviewFinder = require('spotify-preview-finder');
 
   // Initialize recentTracks from localStorage
   useEffect(() => {
@@ -93,6 +94,30 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
     }
   }, []);
 
+  // Function to find and add preview URLs using spotify-preview-finder
+  const enhanceTracksWithPreviews = async (tracks: SpotifyTrack[], token: string): Promise<SpotifyTrack[]> => {
+    const enhancedTracks = await Promise.all(
+      tracks.map(async (track) => {
+        try {
+          // Try to get preview URL from spotify-preview-finder
+          const previewData = await getTrackPreview(track.id, token);
+          
+          // Create a new track object with the updated preview_url
+          return {
+            ...track,
+            preview_url: previewData?.preview_url || null
+          };
+        } catch (error) {
+          console.error(`Failed to get preview for track ${track.id}:`, error);
+          return track; // Return original track if preview fetching fails
+        }
+      })
+    );
+    
+    // Filter out tracks with no previews
+    return enhancedTracks.filter(track => track.preview_url);
+  };
+
   const searchTracks = useCallback(async (query: string) => {
     if (!query.trim()) {
       setTracks([]);
@@ -110,7 +135,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
         throw new Error("Authentication failed");
       }
       const response = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=US`,
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=15&market=US`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -127,7 +152,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
           if (newToken) {
             // Retry the search with the new token
             const retryResponse = await fetch(
-              `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+              `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=15`,
               {
                 headers: {
                   Authorization: `Bearer ${newToken}`,
@@ -141,11 +166,10 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
             
             const data: SpotifySearchResponse = await retryResponse.json();
             
-            const tracksWithPreviews = data.tracks.items.filter(
-              (track) => track.preview_url
-            );
+            // Enhance tracks with previews using spotify-preview-finder
+            const enhancedTracks = await enhanceTracksWithPreviews(data.tracks.items, newToken);
             
-            setTracks(tracksWithPreviews);
+            setTracks(enhancedTracks);
             setIsLoading(false);
             return;
           }
@@ -156,10 +180,14 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
 
       const data: SpotifySearchResponse = await response.json();
       
-      const tracksWithPreviews = data.tracks.items.filter(
-        (track) => track.preview_url
-      );
-      setTracks(tracksWithPreviews);
+      // Enhance tracks with previews using spotify-preview-finder
+      const enhancedTracks = await enhanceTracksWithPreviews(data.tracks.items, token);
+      
+      setTracks(enhancedTracks);
+
+      if (enhancedTracks.length === 0) {
+        toast.info("No preview available for these tracks");
+      }
     } catch (error) {
       console.error("Error searching tracks:", error);
       toast.error("Failed to search for tracks");
@@ -169,7 +197,27 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
     }
   }, [accessToken, getAccessToken]);
 
-  const playTrack = useCallback((track: SpotifyTrack) => {
+  const playTrack = useCallback(async (track: SpotifyTrack) => {
+    if (!track.preview_url) {
+      // If track doesn't have a preview URL, try to get it
+      try {
+        const token = accessToken || await getAccessToken();
+        if (token) {
+          const previewData = await getTrackPreview(track.id, token);
+          if (previewData?.preview_url) {
+            track = { ...track, preview_url: previewData.preview_url };
+          } else {
+            toast.error("No preview available for this track");
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error getting preview URL:", error);
+        toast.error("Could not play this track");
+        return;
+      }
+    }
+    
     setCurrentTrack(track);
     
     // Add to recent tracks (if not already the most recent)
@@ -179,7 +227,7 @@ export function useSpotifyPreview(): UseSpotifyPreviewReturn {
       // Add to the beginning, limit to 5 recent tracks
       return [track, ...filteredTracks].slice(0, 5);
     });
-  }, []);
+  }, [accessToken, getAccessToken]);
 
   // Initialize token on mount
   useEffect(() => {
